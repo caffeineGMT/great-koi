@@ -17,6 +17,7 @@ import ShareWish from "@/components/ShareWish";
 import BreathingGuide from "@/components/BreathingGuide";
 import CommunityWishes from "@/components/CommunityWishes";
 import ThemePicker from "@/components/ThemePicker";
+import { useAnalytics } from "@/hooks/useAnalytics";
 
 const KoiPond = dynamic(() => import("@/components/KoiPond"), { ssr: false });
 
@@ -32,7 +33,8 @@ const WELCOME_KEY = "great-koi-welcomed";
 
 export default function Home() {
   const { wishes, wishCount, addWish, loaded } = useWishStorage();
-  const { theme, setTheme, themes } = usePondTheme();
+  const { theme, setTheme } = usePondTheme();
+  const { track } = useAnalytics();
   const [showInput, setShowInput] = useState(false);
   const [showPremium, setShowPremium] = useState(false);
   const [showJournal, setShowJournal] = useState(false);
@@ -50,12 +52,17 @@ export default function Home() {
         setShowWelcome(true);
       }
     }
+    // Register service worker
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    }
   }, [loaded]);
 
   const handleEnterPond = useCallback(() => {
     localStorage.setItem(WELCOME_KEY, "true");
     setShowWelcome(false);
-  }, []);
+    track("enter_pond");
+  }, [track]);
 
   const handleSendWish = useCallback(
     (text: string) => {
@@ -74,6 +81,7 @@ export default function Home() {
       };
       addWish(wish);
       setShowInput(false);
+      track("wish_sent", { length: text.length });
 
       fetch("/api/wishes", {
         method: "POST",

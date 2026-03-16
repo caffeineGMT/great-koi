@@ -1,0 +1,198 @@
+{
+  "name": "Great Koi - Daily Content Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 10
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Daily 10AM PT",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://great-koi.vercel.app/api/wishes",
+        "sendBody": false,
+        "options": {}
+      },
+      "id": "fetch-community-wishes",
+      "name": "Fetch Community Wishes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.manus.ai/v1/tasks",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "API_KEY",
+              "value": "={{ $env.MANUS_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "prompt",
+              "value": "Create a beautiful, artistic image for Instagram of a serene Japanese koi pond at golden hour. The pond should have crystal clear water with visible koi fish swimming gracefully. Include elements like cherry blossom petals floating on the water, lily pads, and soft volumetric light rays. Style: dreamy, ethereal, high-end editorial photography feel. Aspect ratio: 1:1 for Instagram. No text overlay. The mood should evoke peace, tranquility, and the beauty of making wishes."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "generate-image",
+      "name": "Generate Koi Artwork via Manus",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "amount": 60,
+        "unit": "seconds"
+      },
+      "id": "wait-for-image",
+      "name": "Wait 60s for Generation",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.manus.ai/v1/tasks/{{ $node['Generate Koi Artwork via Manus'].json.task_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "API_KEY",
+              "value": "={{ $env.MANUS_API_KEY }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "poll-manus",
+      "name": "Poll Manus Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.manus.ai/v1/tasks",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "API_KEY",
+              "value": "={{ $env.MANUS_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "prompt",
+              "value": "Write 4 Instagram caption variants for a serene koi pond image from the Great Koi app (a digital wellness app where people send wishes to koi). Include relevant hashtags.\n\nVariant 1 - Witty/Playful: (short, clever, personality)\nVariant 2 - Heartfelt/Inspirational: (emotional, meaningful)\nVariant 3 - Minimal/Zen: (ultra short, 1-2 lines max)\nVariant 4 - Bold/Call-to-Action: (engaging, drives app downloads)\n\nAlso suggest 15 relevant hashtags.\n\nFormat as JSON: {\"witty\": \"...\", \"heartfelt\": \"...\", \"minimal\": \"...\", \"bold\": \"...\", \"hashtags\": [\"...\"]}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "generate-captions",
+      "name": "Generate Captions via Manus",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.github.com/repos/caffeineGMT/great-koi/issues",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"title\": \"[Content Review] Daily Koi Post - {{ $now.format('YYYY-MM-DD') }}\",\n  \"body\": \"## Daily Content for Review\\n\\n### Image\\n![Koi Artwork]({{ $node['Poll Manus Status'].json.result_url }})\\n\\n### Caption Variants\\n{{ $node['Generate Captions via Manus'].json.result }}\\n\\n---\\n**Actions:** Approve by closing this issue. Post manually to Instagram/Twitter with preferred caption.\",\n  \"labels\": [\"content-review\", \"daily-post\"]\n}",
+        "options": {}
+      },
+      "id": "create-review-issue",
+      "name": "Create GitHub Review Issue",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://great-koi.vercel.app/api/analytics",
+        "options": {}
+      },
+      "id": "fetch-analytics",
+      "name": "Fetch Analytics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 200]
+    }
+  ],
+  "connections": {
+    "Daily 10AM PT": {
+      "main": [
+        [
+          { "node": "Fetch Community Wishes", "type": "main", "index": 0 },
+          { "node": "Fetch Analytics", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Fetch Community Wishes": {
+      "main": [
+        [{ "node": "Generate Koi Artwork via Manus", "type": "main", "index": 0 }]
+      ]
+    },
+    "Generate Koi Artwork via Manus": {
+      "main": [
+        [{ "node": "Wait 60s for Generation", "type": "main", "index": 0 }]
+      ]
+    },
+    "Wait 60s for Generation": {
+      "main": [
+        [{ "node": "Poll Manus Status", "type": "main", "index": 0 }]
+      ]
+    },
+    "Poll Manus Status": {
+      "main": [
+        [{ "node": "Generate Captions via Manus", "type": "main", "index": 0 }]
+      ]
+    },
+    "Generate Captions via Manus": {
+      "main": [
+        [{ "node": "Create GitHub Review Issue", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "great-koi" },
+    { "name": "content-pipeline" },
+    { "name": "daily" }
+  ]
+}

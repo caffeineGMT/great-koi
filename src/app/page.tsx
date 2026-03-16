@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useWishStorage } from "@/hooks/useWishStorage";
+import { usePondTheme } from "@/hooks/usePondTheme";
 import WishInput from "@/components/WishInput";
 import WishOverlay from "@/components/WishOverlay";
 import Header from "@/components/Header";
@@ -15,6 +16,7 @@ import WelcomeScreen from "@/components/WelcomeScreen";
 import ShareWish from "@/components/ShareWish";
 import BreathingGuide from "@/components/BreathingGuide";
 import CommunityWishes from "@/components/CommunityWishes";
+import ThemePicker from "@/components/ThemePicker";
 
 const KoiPond = dynamic(() => import("@/components/KoiPond"), { ssr: false });
 
@@ -30,13 +32,14 @@ const WELCOME_KEY = "great-koi-welcomed";
 
 export default function Home() {
   const { wishes, wishCount, addWish, loaded } = useWishStorage();
+  const { theme, setTheme, themes } = usePondTheme();
   const [showInput, setShowInput] = useState(false);
   const [showPremium, setShowPremium] = useState(false);
   const [showJournal, setShowJournal] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [showBreathing, setShowBreathing] = useState(false);
+  const [showThemes, setShowThemes] = useState(false);
   const [shareWish, setShareWish] = useState<string | null>(null);
-  const [latestWish, setLatestWish] = useState<string | null>(null);
 
   const FREE_WISH_LIMIT = 3;
 
@@ -70,17 +73,14 @@ export default function Home() {
         y: 0.3 + Math.random() * 0.4,
       };
       addWish(wish);
-      setLatestWish(text);
       setShowInput(false);
 
-      // Save to community pond (fire-and-forget)
       fetch("/api/wishes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text }),
       }).catch(() => {});
 
-      // Offer share after a moment
       setTimeout(() => {
         setShareWish(text);
       }, 3000);
@@ -88,7 +88,8 @@ export default function Home() {
     [wishCount, addWish]
   );
 
-  const isModalOpen = showInput || showPremium || showJournal || showBreathing || !!shareWish;
+  const isModalOpen =
+    showInput || showPremium || showJournal || showBreathing || showThemes || !!shareWish;
 
   const handlePondClick = useCallback(() => {
     if (!isModalOpen && !showWelcome) {
@@ -108,7 +109,7 @@ export default function Home() {
 
   return (
     <main className="relative w-screen h-screen overflow-hidden">
-      <KoiPond wishes={wishes} onPondClick={handlePondClick} />
+      <KoiPond wishes={wishes} onPondClick={handlePondClick} theme={theme} />
       <Particles />
       <Ripples />
 
@@ -122,6 +123,7 @@ export default function Home() {
             onPremiumClick={() => setShowPremium(true)}
             onJournalClick={() => setShowJournal(true)}
             onBreathingClick={() => setShowBreathing(true)}
+            onThemeClick={() => setShowThemes(true)}
           />
 
           <WishOverlay wishes={wishes} />
@@ -142,15 +144,10 @@ export default function Home() {
           )}
 
           {showInput && (
-            <WishInput
-              onSend={handleSendWish}
-              onClose={() => setShowInput(false)}
-            />
+            <WishInput onSend={handleSendWish} onClose={() => setShowInput(false)} />
           )}
 
-          {showPremium && (
-            <PremiumModal onClose={() => setShowPremium(false)} />
-          )}
+          {showPremium && <PremiumModal onClose={() => setShowPremium(false)} />}
 
           {showJournal && (
             <WishJournal wishes={wishes} onClose={() => setShowJournal(false)} />
@@ -160,11 +157,16 @@ export default function Home() {
             <BreathingGuide onClose={() => setShowBreathing(false)} />
           )}
 
-          {shareWish && (
-            <ShareWish
-              wishText={shareWish}
-              onClose={() => setShareWish(null)}
+          {showThemes && (
+            <ThemePicker
+              currentTheme={theme}
+              onSelectTheme={setTheme}
+              onClose={() => setShowThemes(false)}
             />
+          )}
+
+          {shareWish && (
+            <ShareWish wishText={shareWish} onClose={() => setShareWish(null)} />
           )}
         </>
       )}

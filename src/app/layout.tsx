@@ -8,6 +8,7 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://great-koi.vercel.app"),
   title: "Great Koi - Send Your Wishes to the Pond",
   description:
     "A digital sanctuary where your wishes swim with beautiful koi. Release stress, set intentions, and find peace in the gentle movement of the pond.",

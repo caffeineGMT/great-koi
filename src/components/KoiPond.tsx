@@ -4,6 +4,7 @@ import { useRef, useMemo, useCallback } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { Wish } from "@/app/page";
+import type { PondTheme } from "@/hooks/usePondTheme";
 
 interface KoiProps {
   bodyColor: string;
@@ -241,7 +242,7 @@ function LilyPad({ position }: { position: [number, number, number] }) {
   );
 }
 
-function Scene({ wishes }: { wishes: Wish[] }) {
+function Scene({ wishes, theme }: { wishes: Wish[]; theme: PondTheme }) {
   const koiConfigs = useMemo<KoiProps[]>(
     () => [
       { bodyColor: "#e87040", accentColor: "#f0ebe0", speed: 0.6, offset: 0, size: 0.18 },
@@ -270,10 +271,10 @@ function Scene({ wishes }: { wishes: Wish[] }) {
   return (
     <>
       <ambientLight intensity={0.35} />
-      <directionalLight position={[5, 8, 5]} intensity={0.5} color="#e8dcc8" />
-      <pointLight position={[0, 3, 0]} intensity={0.2} color="#d4a855" distance={15} />
-      <pointLight position={[-3, 1, 2]} intensity={0.1} color="#4488aa" distance={8} />
-      <pointLight position={[3, 1, -2]} intensity={0.1} color="#4488aa" distance={8} />
+      <directionalLight position={[5, 8, 5]} intensity={0.5} color={theme.ambientColor} />
+      <pointLight position={[0, 3, 0]} intensity={0.2} color={theme.lightColor} distance={15} />
+      <pointLight position={[-3, 1, 2]} intensity={0.1} color={theme.waterColor} distance={8} />
+      <pointLight position={[3, 1, -2]} intensity={0.1} color={theme.waterColor} distance={8} />
 
       <WaterSurface />
 
@@ -309,9 +310,10 @@ function Scene({ wishes }: { wishes: Wish[] }) {
 interface KoiPondProps {
   wishes: Wish[];
   onPondClick: () => void;
+  theme: PondTheme;
 }
 
-export default function KoiPond({ wishes, onPondClick }: KoiPondProps) {
+export default function KoiPond({ wishes, onPondClick, theme }: KoiPondProps) {
   const handleClick = useCallback(() => {
     onPondClick();
   }, [onPondClick]);
@@ -327,7 +329,7 @@ export default function KoiPond({ wishes, onPondClick }: KoiPondProps) {
         gl={{ antialias: true, alpha: true }}
         dpr={[1, 2]}
       >
-        <Scene wishes={wishes} />
+        <Scene wishes={wishes} theme={theme} />
       </Canvas>
     </div>
   );

@@ -14,6 +14,7 @@ import SoundToggle from "@/components/SoundToggle";
 import WelcomeScreen from "@/components/WelcomeScreen";
 import ShareWish from "@/components/ShareWish";
 import BreathingGuide from "@/components/BreathingGuide";
+import CommunityWishes from "@/components/CommunityWishes";
 
 const KoiPond = dynamic(() => import("@/components/KoiPond"), { ssr: false });
 
@@ -72,6 +73,13 @@ export default function Home() {
       setLatestWish(text);
       setShowInput(false);
 
+      // Save to community pond (fire-and-forget)
+      fetch("/api/wishes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      }).catch(() => {});
+
       // Offer share after a moment
       setTimeout(() => {
         setShareWish(text);
@@ -119,6 +127,7 @@ export default function Home() {
           <WishOverlay wishes={wishes} />
 
           <SoundToggle />
+          <CommunityWishes />
 
           {!isModalOpen && (
             <button
